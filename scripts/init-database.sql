@@ -1,42 +1,56 @@
 /*
-=============================================================
-Create Database and Schemas
-=============================================================
-Script Purpose:
-    This script creates a new database named 'DataWarehouse' after checking if it already exists. 
-    If the database exists, it is dropped and recreated. Additionally, the script sets up three schemas 
-    within the database: 'bronze', 'silver', and 'gold'.
-	
+===============================================================================
+Database Initialization Script: Revenue Data Warehouse
+===============================================================================
+Project Name:    Revenue Analytics Data Platform
+Script Purpose:  This script initializes the 'Revenue' database and establishes 
+                 the Medallion Architecture (Bronze, Silver, Gold) schemas.
+Version:         1.0
+-------------------------------------------------------------------------------
 WARNING:
-    Running this script will drop the entire 'DataWarehouse' database if it exists. 
-    All data in the database will be permanently deleted. Proceed with caution 
-    and ensure you have proper backups before running this script.
+    This script is destructive. If the 'Revenue' database exists, it will be 
+    dropped and all data will be permanently deleted.
+===============================================================================
 */
 
 USE master;
-GO           --GO in SQL Seprate Batches when Working with multiple SQL Statement.
+GO
 
--- Drop and recreate the 'DataWarehouse' database
-IF EXISTS (SELECT 1 FROM sys.databases WHERE name = 'DataWarehouse')
+-- =============================================================================
+-- 1. Create Database
+-- =============================================================================
+PRINT 'Initializing Database Creation...';
+
+IF EXISTS (SELECT 1 FROM sys.databases WHERE name = 'Revenue')
 BEGIN
-    ALTER DATABASE DataWarehouse SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE DataWarehouse;
+    PRINT 'Existing [Revenue] database found. Dropping for fresh install...';
+    ALTER DATABASE Revenue SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE Revenue;
 END;
 GO
 
--- Create the 'DataWarehouse' database
-CREATE DATABASE DataWarehouse;
+CREATE DATABASE Revenue;
 GO
 
-USE DataWarehouse;
+USE Revenue;
 GO
 
--- Create Schemas
+-- =============================================================================
+-- 2. Create Medallion Schemas (Bronze -> Silver -> Gold)
+-- =============================================================================
+PRINT 'Creating Data Layers (Schemas)...';
+GO
+
+-- Bronze: Raw data ingestion from source systems
 CREATE SCHEMA bronze;
-GO                         
+GO 
 
+-- Silver: Cleaned and standardized data
 CREATE SCHEMA silver;
 GO
 
+-- Gold: Business-ready reporting and analytics layer
 CREATE SCHEMA gold;
 GO
+
+PRINT 'Database [Revenue] and Schemas successfully created.';
