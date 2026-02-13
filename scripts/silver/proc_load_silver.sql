@@ -34,41 +34,71 @@ BEGIN
 		-- Loading silver.crm_cust_info
         SET @start_time = GETDATE();
 		PRINT '>> Truncating Table: silver.crm_cust_info';
-		TRUNCATE TABLE silver.crm_cust_info;
+		TRUNCATE TABLE Revenue.silver.olist_customer;
 		PRINT '>> Inserting Data Into: silver.crm_cust_info';
-		INSERT INTO silver.crm_cust_info (
-			cst_id, 
-			cst_key, 
-			cst_firstname, 
-			cst_lastname, 
-			cst_marital_status, 
-			cst_gndr,
-			cst_create_date
+		
+
+		INSERT INTO Revenue.silver.olist_customer
+		(
+			Customer_no,
+			Prefix,
+			FirstName,
+			LastName,
+			BirthDate,
+			MartialStatus,
+			Gender,
+			EmailAddress,
+			AnnualIncome,
+			TotalChild,
+			Education,
+			Occupation,
+			HomeOwner
 		)
 		SELECT
-			cst_id,
-			cst_key,
-			TRIM(cst_firstname) AS cst_firstname,
-			TRIM(cst_lastname) AS cst_lastname,
-			CASE 
-				WHEN UPPER(TRIM(cst_marital_status)) = 'S' THEN 'Single'
-				WHEN UPPER(TRIM(cst_marital_status)) = 'M' THEN 'Married'
-				ELSE 'n/a'
-			END AS cst_marital_status, -- Normalize marital status values to readable format
-			CASE 
-				WHEN UPPER(TRIM(cst_gndr)) = 'F' THEN 'Female'
-				WHEN UPPER(TRIM(cst_gndr)) = 'M' THEN 'Male'
-				ELSE 'n/a'
-			END AS cst_gndr, -- Normalize gender values to readable format
-			cst_create_date
-		FROM (
-			SELECT
-				*,
-				ROW_NUMBER() OVER (PARTITION BY cst_id ORDER BY cst_create_date DESC) AS flag_last
-			FROM bronze.crm_cust_info
-			WHERE cst_id IS NOT NULL
-		) t
-		WHERE flag_last = 1; -- Select the most recent record per customer
+			Customer_no,
+			COALESCE(Prefix,'N/A') AS New_prefix,
+			TRIM(FirstName),
+			TRIM(LastName),
+			TRIM(REPLACE(BirthDate,'/','-')),
+		
+			CASE
+				WHEN MartialStatus = 'M' THEN 'Married'
+				WHEN MartialStatus = 'S' THEN 'Single'
+				ELSE 'N/A'
+			END AS MartialStatus,
+		
+			CASE
+				WHEN Gender = 'F' THEN 'Female'
+				WHEN Gender = 'M' THEN 'Male'
+				ELSE 'N/A'
+			END AS Gender,
+		
+			EmailAddress,
+		
+			ROUND(
+				TRY_CAST(REPLACE(AnnualIncome,'"$','') AS FLOAT),
+				2
+			) * 60.59 AS AnnualIncome,
+		
+			CASE
+				WHEN TRY_CAST(REPLACE(TotalChild,'"','') AS INT) = 0 THEN '0'
+				ELSE TRIM(TotalChild)
+			END AS TotalChild,
+		
+			CASE Education
+				WHEN 0 THEN 'Level 0'
+				WHEN 1 THEN 'Level 1'
+				WHEN 2 THEN 'Level 2'
+				WHEN 3 THEN 'Level 3'
+				WHEN 4 THEN 'Level 4'
+				WHEN 5 THEN 'Level 5'
+				ELSE 'Invalid Code'
+			END AS Education,
+		
+			Occupation,
+			HomeOwner
+		
+		FROM Revenue.bronze.olist_customer; -- Select the most recent record per customer
 		SET @end_time = GETDATE();
         PRINT '>> Load Duration: ' + CAST(DATEDIFF(SECOND, @start_time, @end_time) AS NVARCHAR) + ' seconds';
         PRINT '>> -------------';
